@@ -1,7 +1,5 @@
 "use client";
 
-import { firestore } from "@/firebase/firebase";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { useSession } from "next-auth/react";
 import React, { useState } from "react";
 import { toast } from "react-hot-toast";
@@ -11,9 +9,13 @@ import ModelSelection from "./ModelSelection";
 
 type Props = {
   chatId: string;
+  refresh:()=>void
 };
 
-function ChatInput({ chatId }: Props) {
+function ChatInput({
+  chatId,
+  refresh
+ }: Props) {
   const { data: session } = useSession();
   const [prompt, setPrompt] = useState("");
   const [loading, setIsLoading] = useState(true);
@@ -32,27 +34,19 @@ function ChatInput({ chatId }: Props) {
       setPrompt("");
 
       setIsLoading(false);
-
-      const message: Message = {
-        text: input,
-        createdAt: serverTimestamp(),
-        user: {
-          _id: session?.user.uid!,
-          name: session?.user.name!,
-          email: session?.user.email!,
-          avatar:
-            session?.user.image ||
-            `https://ui-avatars.com/api/?name=${session?.user.name!}`,
+      await fetch(`/api/chats/${chatId}/user`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      };
-
-      await addDoc(
-        collection(
-          firestore,
-          `users/${session?.user?.uid!}/chats/${chatId}/messages`
-        ),
-        message
-      );
+        body: JSON.stringify({
+          prompt: input,
+          chatId,
+          model,
+        }),
+      }).then(() => {      
+        refresh();
+      });
 
       // loading
       const notification = toast.loading("ChatGPT is thinking...");
@@ -66,21 +60,19 @@ function ChatInput({ chatId }: Props) {
           prompt: input,
           chatId,
           model,
-          session,
         }),
       }).then(() => {
         // Tost Notification
         toast.success("ChatGPT has responded!", {
           id: notification,
         });
-
+        refresh();
         setIsLoading(true);
       });
     } catch (error: any) {
       console.log(error.message);
     }
   };
-
   return (
     <div className="bg-gray-700/50 text-gray-400 rounded-lg text-sm">
       <form onSubmit={generateResponse} className="p-5 space-x-5 flex">

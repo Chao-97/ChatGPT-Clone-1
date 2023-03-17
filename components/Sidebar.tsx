@@ -5,7 +5,9 @@ import { collection, orderBy, query } from "firebase/firestore";
 import { motion } from "framer-motion";
 import { signOut, useSession } from "next-auth/react";
 import { useCollection } from "react-firebase-hooks/firestore";
-
+import { useQuery } from "react-query";
+import axios from "axios";
+import { Chat } from "@prisma/client";
 import ChatRow from "./ChatRow";
 import ModelSelection from "./ModelSelection";
 import NewChat from "./NewChat";
@@ -14,12 +16,21 @@ type Props = {};
 
 function Sidebar({}: Props) {
   const { data: session } = useSession();
-  const [chats, loading] = useCollection(
-    session &&
-      query(
-        collection(firestore, `users/${session?.user?.uid!}/chats`),
-        orderBy("createdAt", "asc")
-      )
+  // const [chats, loading] = useCollection(
+  //   session &&
+  //     query(
+  //       collection(firestore, `users/${session?.user?.uid!}/chats`),
+  //       orderBy("createdAt", "asc")
+  //     )
+  // );
+  const {
+    data: chats,
+    refetch: refetchProjects,
+    isLoading,
+  } = useQuery(`chats`, () =>
+    axios
+      .get<Chat[]>(`/api/chats`)
+      .then((response) => response.data)
   );
 
   return (
@@ -31,12 +42,12 @@ function Sidebar({}: Props) {
             <ModelSelection />
           </div>
           <div className="flex flex-col space-y-2 my-2">
-            {loading && (
+            {isLoading && (
               <div className="animate-pulse text-center text-white">
                 <p>Loading Chats...</p>
               </div>
             )}
-            {chats?.docs.map((chat) => (
+            {chats?.map((chat) => (
               <motion.div
                 initial={{ opacity: 0 }}
                 whileInView={{ opacity: 1 }}
@@ -61,7 +72,7 @@ function Sidebar({}: Props) {
           </div>
           <div
             className="chatRow items-center justify-start bg-gray-700/50 gap-5"
-            onClick={() => signOut()}
+            onClick={() => signOut({callbackUrl: `${process.env.NEXT_PUBLIC_URL}/api/auth/logout?userId=${session.user.uid}`})}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"

@@ -1,15 +1,17 @@
 "use client";
 
-import { DocumentData } from "firebase/firestore";
 import { motion } from "framer-motion";
 import React from "react";
+import { Message } from "@prisma/client";
+import { useSession } from "next-auth/react";
 
 type Props = {
-  message: DocumentData;
+  message: Message;
 };
 
-function Message({ message }: Props) {
-  const isChatGPT = message.user.name === "ChatGPT";
+function Messages({ message }: Props) {
+  const isChatGPT = message.role === "ChatGPT";
+  const { data: session } = useSession();
 
   return (
     <motion.div
@@ -19,11 +21,17 @@ function Message({ message }: Props) {
       className={`py-5 text-white ${isChatGPT && "bg-[#434654]"}`}
     >
       <div className="flex space-x-5 px-10 max-w-2xl mx-auto">
-        <img src={message.user.avatar} alt="" className="h-8 w-8" />
+        {isChatGPT? 
+          <img src="/AIicon.jpg"
+          alt={message.role}  className="h-8 w-8" />
+        :
+          <img src="/icon.png"
+          alt={message.role}  className="h-8 w-8" />
+        }
         <p className="pt-1 text-sm">{message.text}</p>
       </div>
     </motion.div>
   );
 }
 
-export default Message;
+export default Messages;

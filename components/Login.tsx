@@ -14,7 +14,7 @@ function Login({}: Props) {
         className="w-96"
       />
       <button
-        onClick={() => signIn("google")}
+        onClick={() => signIn("authing",{callbackUrl: "/"})}
         className="text-white font-bold text-3xl animate-pulse"
       >
         Sign In to use ChatGpt

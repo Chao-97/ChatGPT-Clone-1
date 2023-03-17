@@ -1,31 +1,44 @@
 "use client";
 
-import { firestore } from "@/firebase/firebase";
-import { collection, orderBy, query } from "firebase/firestore";
 import { useSession } from "next-auth/react";
 import { useEffect, useRef } from "react";
-import { useCollection } from "react-firebase-hooks/firestore";
-
-import Message from "./Message";
+import { useQuery } from "react-query";
+import axios from "axios";
+import { Message } from "@prisma/client";
+ import Messages from "./Message";
 
 type Props = {
   chatId: string;
+  messages:Message[]| undefined;
+  refresh:()=>void
 };
 
-function Chat({ chatId }: Props) {
+function Chat({ 
+  chatId,
+  messages,
+  refresh
+ }: Props) {
   const { data: session } = useSession();
   const messageEndRef = useRef<null | HTMLDivElement>(null);
-
-  const [messages] = useCollection(
-    session &&
-      query(
-        collection(
-          firestore,
-          `users/${session?.user?.uid!}/chats/${chatId}/messages`
-        ),
-        orderBy("createdAt", "asc")
-      )
-  );
+  // const {
+  //   data: messages,
+  //   refetch: refetchProjects,
+  //   isLoading,
+  // } = useQuery(`messages`, () =>
+  //   axios
+  //     .get<Message[]>(`/api/chats/${chatId}`)
+  //     .then((response) => response.data)
+  // );
+  // const [messages] = useCollection(
+  //   session &&
+  //     query(
+  //       collection(
+  //         firestore,
+  //         `users/${session?.user?.uid!}/chats/${chatId}/messages`
+  //       ),
+  //       orderBy("createdAt", "asc")
+  //     )
+  // );
   //console.log("🚀 ~ file: Chat.tsx:27 ~ Chat ~ messages:", messages?.docs);
 
   useEffect(() => {
@@ -34,7 +47,7 @@ function Chat({ chatId }: Props) {
 
   return (
     <div className="flex-1 overflow-y-auto overflow-x-hidden">
-      {messages?.empty && (
+      {!(messages?.length!>0) && (
         <>
           <p className="mt-10 text-center text-white">
             Type a prompt in below to get started
@@ -55,8 +68,8 @@ function Chat({ chatId }: Props) {
           </svg>
         </>
       )}
-      {messages?.docs.map((message) => (
-        <Message key={message.id} message={message.data()} />
+      {messages?.map((message) => (
+        <Messages key={message.id} message={message} />
       ))}
       <div ref={messageEndRef} />
     </div>
@@ -64,3 +77,4 @@ function Chat({ chatId }: Props) {
 }
 
 export default Chat;
+

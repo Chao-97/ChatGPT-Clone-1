@@ -1,10 +1,11 @@
-import { firestore } from "@/firebase/firebase";
-import { collection, deleteDoc, doc, orderBy, query } from "firebase/firestore";
 import { Session } from "next-auth";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
-import { useCollection } from "react-firebase-hooks/firestore";
+import { useQuery } from "react-query";
+import axios from "axios";
+import { Message } from "@prisma/client";
+import { useMutation } from "react-query";
 
 type Props = {
   id: string;
@@ -15,16 +16,33 @@ function ChatRow({ id, session }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const [active, setActive] = useState(false);
-
-  const [messages] = useCollection(
-    query(
-      collection(
-        firestore,
-        `users/${session?.user?.uid!}/chats/${id}/messages`
-      ),
-      orderBy("createdAt", "asc")
-    )
+  const { isLoading:isLoading1, mutate: deleteChat } = useMutation(
+    "delete-chat",
+    () => axios.delete(`/api/chats/${id}`),
+    {
+      onSuccess: () => {
+        router.replace("/");
+      },
+    }
   );
+  const {
+    data: messages,
+    refetch: refetchProjects,
+    isLoading,
+  } = useQuery(`messages`, () =>
+    axios
+      .get<Message[]>(`/api/chats/${id}`)
+      .then((response) => response.data)
+  );
+  // const [messages] = useCollection(
+  //   query(
+  //     collection(
+  //       firestore,
+  //       `users/${session?.user?.uid!}/chats/${id}/messages`
+  //     ),
+  //     orderBy("createdAt", "asc")
+  //   )
+  // );
 
   useEffect(() => {
     if (!pathname) return;
@@ -33,8 +51,9 @@ function ChatRow({ id, session }: Props) {
   }, [pathname]);
 
   const removeChat = async () => {
-    await deleteDoc(doc(firestore, `users/${session?.user?.uid!}/chats/${id}`));
-    router.replace("/");
+    deleteChat();
+    // await deleteDoc(doc(firestore, `users/${session?.user?.uid!}/chats/${id}`));
+    // router.replace("/");
   };
 
   return (
@@ -57,7 +76,7 @@ function ChatRow({ id, session }: Props) {
         />
       </svg>
       <p className="flex-1 hidden md:inline-flex truncate">
-        {messages?.docs[messages?.docs.length - 1]?.data().text || "New Chat"}
+        {messages?.[messages?.length - 1]?.text || "New Chat"}
       </p>
       <svg
         xmlns="http://www.w3.org/2000/svg"
